@@ -1,27 +1,39 @@
-// api/subscribe.js
 const { Octokit } = require("@octokit/rest");
 
-const OWNER = "lxsoftroxs";              // Your GitHub username
-const REPO = "lxsoftroxs.github.io";       // Your GitHub Pages repository name
-const FILE_PATH = "subscribers.json";      // File path in your repo root
-const BRANCH = "main";                     // Adjust if your default branch is different
+const OWNER = "lxsoftroxs";
+const REPO = "lxsoftroxs.github.io";
+const FILE_PATH = "subscribers.json";
+const BRANCH = "main";
 
 module.exports = async (req, res) => {
+  // 1. Handle OPTIONS (CORS Preflight)
+  if (req.method === "OPTIONS") {
+    // Set CORS headers
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    return res.status(200).end(); // End the response here
+  }
+
+  // 2. For all other methods except POST, return 405
   if (req.method !== "POST") {
     return res.status(405).json({ message: "Method Not Allowed" });
   }
-  
+
+  // 3. Set CORS headers for the actual POST response as well
+  res.setHeader("Access-Control-Allow-Origin", "*");
+
+  // 4. Now handle your subscription logic
   const { email } = req.body;
   if (!email) {
     return res.status(400).json({ message: "Email is required" });
   }
-  
-  // Initialize Octokit with your GitHub token
+
+  // Initialize Octokit
   const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
-  
   let subscribers = [];
   let sha = null;
-  
+
   try {
     const { data } = await octokit.repos.getContent({
       owner: OWNER,
@@ -32,18 +44,17 @@ module.exports = async (req, res) => {
     subscribers = JSON.parse(Buffer.from(data.content, data.encoding).toString());
     sha = data.sha;
   } catch (error) {
-    // If file doesn't exist, assume empty list
-    console.log("No subscribers.json found, starting with empty list.");
+    // If file not found, use an empty array
     subscribers = [];
   }
-  
+
   if (subscribers.includes(email)) {
     return res.status(200).json({ message: "You're already subscribed!" });
   }
-  
+
   subscribers.push(email);
   const content = Buffer.from(JSON.stringify(subscribers, null, 2)).toString("base64");
-  
+
   try {
     await octokit.repos.createOrUpdateFileContents({
       owner: OWNER,
