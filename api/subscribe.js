@@ -52,7 +52,11 @@ module.exports = async (req, res) => {
     return res.status(200).json({ message: "You're already subscribed!" });
   }
 
+  console.log("Before update, subscribers array is:", subscribers);
+
   subscribers.push(email);
+  console.log("After push, subscribers array is:", subscribers);
+
   const content = Buffer.from(JSON.stringify(subscribers, null, 2)).toString("base64");
 
   try {
@@ -65,9 +69,11 @@ module.exports = async (req, res) => {
       branch: BRANCH,
       sha: sha || undefined,
     });
-    return res.status(200).json({ message: "Subscribed successfully!" });
-  } catch (error) {
-    console.error("Error updating subscribers:", error.message);
-    return res.status(500).json({ message: "Failed to update subscribers." });
-  }
+  console.log("Successfully updated subscribers.json on GitHub");
+  return res.status(200).json({ message: "Subscribed successfully!" });
+} catch (error) {
+  console.error("Error updating subscribers:", error);
+  return res.status(500).json({ message: "Failed to update subscribers." });
+}
+
 };
